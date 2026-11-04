@@ -244,6 +244,9 @@ func (m *Model) openExecView(run *model.Run) tea.Cmd {
 	m.execList.SetFocused(false)
 
 	cmds := []tea.Cmd{m.markRunNotificationsRead(run.ID)}
+	if limoniOutput { // the line stream waits for a pending run to start
+		return tea.Batch(append(cmds, m.openLimoniOutput(run))...)
+	}
 	if run.Status != model.PhasePending {
 		// Seed the tail in one page so the viewer paints at the bottom
 		// immediately; the live stream (opened once the page lands) then carries

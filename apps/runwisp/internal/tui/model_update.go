@@ -58,6 +58,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleLogTailLoaded(msg)
 	case uikit.LogStreamConnectedMsg:
 		return m.handleLogStreamConnected(msg)
+	case limoniClosedMsg:
+		return m.handleLimoniClosed(msg)
 	case uikit.LogLineMsg:
 		return m.handleLogLine(msg)
 	case uikit.LogRegionMsg:
