@@ -12,7 +12,7 @@ B=${1:?path to a runwisp binary}
 HERE=$(cd "$(dirname "$0")" && pwd)
 W=$(mktemp -d); SOCK=$W/rw.sock
 "$B" daemon -c "$HERE/runwisp.toml" --data "$W/data" --socket "$SOCK" --port 19477 >"$W/daemon.log" 2>&1 &
-DAEMON=$!; trap 'tmux kill-session -t rwmeasure 2>/dev/null; kill $DAEMON; rm -rf "$W"' EXIT
+DAEMON=$!; trap 'tmux kill-session -t rwmeasure 2>/dev/null || true; kill $DAEMON 2>/dev/null || true; rm -rf "$W"' EXIT
 sleep 4
 ticks() { awk '{print $14+$15}' "/proc/$1/stat"; } # utime+stime, in clock ticks
 hz=$(getconf CLK_TCK)
