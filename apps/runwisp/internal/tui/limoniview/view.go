@@ -52,9 +52,32 @@ func (*Screen) SetStderr(io.Writer) {}
 func (s *Screen) Run() error {
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
-	log := &store{}
-	go log.follow(ctx, s.client, s.run.ID, limoni.Wakeup)
+	u := newUI(s.run)
+	go u.log.follow(ctx, s.client, s.run.ID, limoni.Wakeup)
+	err := limoni.RunWithContext(ctx, u.frame, limoni.WithTitle("RunWisp · "+s.run.TaskName))
+	if err == context.Canceled && s.ctx.Err() == nil {
+		err = nil
+	}
+	return err
+}
 
+// ui draws the screen; the frame function is all of it, so a benchmark can
+// drive the same code a terminal does.
+type ui struct {
+	log    *store
+	state  *widgets.LogViewState
+	view   *widgets.LogView
+	head   string
+	status statusText
+
+	bar, title limoni.Style
+	keysW      int
+}
+
+const keys = "↑↓ PgUp PgDn scroll  ←→ pan  q back"
+
+func newUI(run model.Run) *ui {
+	log := &store{}
 	st := widgets.NewLogViewState()
 	view := &widgets.LogView{ID: "output", Label: "Run output", Source: log, State: st, LineNumbers: true}
 	view.Style = cell(uikit.ColorText, uikit.ColorBg)
@@ -63,51 +86,46 @@ func (s *Screen) Run() error {
 	view.LevelStyles[widgets.LevelError] = cell(uikit.ColorError, uikit.ColorBg)
 	view.LevelStyles[widgets.LevelTrace] = cell(uikit.ColorTextMuted, uikit.ColorBg)
 	view.LevelStyles[widgets.LevelTrace].Modifier |= limoni.ModifierItalic
+	u := &ui{log: log, state: st, view: view, head: run.TaskName + "  " + run.ID, keysW: len([]rune(keys))}
+	u.bar = cell(uikit.ColorTextDim, uikit.ColorBg)
+	u.title = cell(uikit.ColorPrimary, uikit.ColorBg)
+	u.title.Modifier |= limoni.ModifierBold
+	return u
+}
 
-	bar := cell(uikit.ColorTextDim, uikit.ColorBg)
-	title := cell(uikit.ColorPrimary, uikit.ColorBg)
-	title.Modifier |= limoni.ModifierBold
-	head := s.run.TaskName + "  " + s.run.ID
-	var status statusText
-	const keys = "↑↓ PgUp PgDn scroll  ←→ pan  q back"
-	keysW := len([]rune(keys))
-
-	err := limoni.RunWithContext(ctx, func(f *limoni.Frame, ev *limoni.Event) bool {
-		log.mu.Lock()
-		defer log.mu.Unlock()
-		if ev != nil && ev.Type == limoni.EventKey {
-			k := ev.Key
-			if k.Type == limoni.KeyEsc || (k.Type == limoni.KeyRune && k.Ch == 'q') {
-				return false
-			}
-			st.HandleKey(k, log.Len())
+// frame handles ev and draws one frame; false closes the screen.
+func (u *ui) frame(f *limoni.Frame, ev *limoni.Event) bool {
+	log, st := u.log, u.state
+	log.mu.Lock()
+	defer log.mu.Unlock()
+	if ev != nil && ev.Type == limoni.EventKey {
+		k := ev.Key
+		if k.Type == limoni.KeyEsc || (k.Type == limoni.KeyRune && k.Ch == 'q') {
+			return false
 		}
-		area := f.Area()
-		rows := limoni.SplitVertical(area, limoni.Fixed(1), limoni.Fill(), limoni.Fixed(1))
-		fill(f, rows[0], bar)
-		f.Text(int(rows[0].X)+1, int(rows[0].Y), head, title)
-		f.RenderWidget(view, rows[1])
-
-		fill(f, rows[2], bar)
-		state := "paused, End follows"
-		switch {
-		case log.err != nil:
-			state = "stream error"
-		case log.done:
-			state = "ended"
-		case len(log.lines) == 0:
-			state = "waiting for output"
-		case st.Follow:
-			state = "following"
-		}
-		f.Text(int(rows[2].X)+1, int(rows[2].Y), status.get(len(log.lines), state), bar)
-		f.Text(int(rows[2].X+rows[2].Width)-keysW-1, int(rows[2].Y), keys, bar)
-		return true
-	}, limoni.WithTitle("RunWisp · "+s.run.TaskName))
-	if err == context.Canceled && s.ctx.Err() == nil {
-		err = nil
+		st.HandleKey(k, log.Len())
 	}
-	return err
+	area := f.Area()
+	rows := limoni.SplitVertical(area, limoni.Fixed(1), limoni.Fill(), limoni.Fixed(1))
+	fill(f, rows[0], u.bar)
+	f.Text(int(rows[0].X)+1, int(rows[0].Y), u.head, u.title)
+	f.RenderWidget(u.view, rows[1])
+
+	fill(f, rows[2], u.bar)
+	state := "paused, End follows"
+	switch {
+	case log.err != nil:
+		state = "stream error"
+	case log.done:
+		state = "ended"
+	case len(log.lines) == 0:
+		state = "waiting for output"
+	case st.Follow:
+		state = "following"
+	}
+	f.Text(int(rows[2].X)+1, int(rows[2].Y), u.status.get(len(log.lines), state), u.bar)
+	f.Text(int(rows[2].X+rows[2].Width)-u.keysW-1, int(rows[2].Y), keys, u.bar)
+	return true
 }
 
 func fill(f *limoni.Frame, r limoni.Rect, st limoni.Style) {
