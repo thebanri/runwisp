@@ -147,6 +147,8 @@ github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWD
 github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
 github.com/thebanri/limoni v0.16.1-0.20261104194215-65de463f2533 h1:QRzzxM8bvlM+jFPbnBRsexxxf1JnoDdkDNgBBnjKfeg=
 github.com/thebanri/limoni v0.16.1-0.20261104194215-65de463f2533/go.mod h1:aHH0MYLRJrv8GBKn0HPI68H3KSTdgu6MHqBfkvXWZVA=
+github.com/thebanri/limoni v0.16.1-0.20261104200510-e3e5f63cb006 h1:wnQLIf1iqEkO2AXPvDMXqNebGDbolw6Jc9bB2AKiv6c=
+github.com/thebanri/limoni v0.16.1-0.20261104200510-e3e5f63cb006/go.mod h1:aHH0MYLRJrv8GBKn0HPI68H3KSTdgu6MHqBfkvXWZVA=
 github.com/wneessen/go-mail v0.8.1 h1:tVcncj02/QySVFw3zr/kXOzZcuFQqBNT6K+Rbgm/pcM=
 github.com/wneessen/go-mail v0.8.1/go.mod h1:dWZ61zadzCIyvB4y1/YzC5O7MrbbzBfPkARmbosdf8w=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=

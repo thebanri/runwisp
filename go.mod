@@ -29,7 +29,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.12.1
-	github.com/thebanri/limoni v0.16.1-0.20261104194215-65de463f2533
+	github.com/thebanri/limoni v0.16.1-0.20261104200510-e3e5f63cb006
 	github.com/wneessen/go-mail v0.8.1
 	github.com/xhit/go-str2duration/v2 v2.2.0
 	golang.org/x/crypto v0.58.0
