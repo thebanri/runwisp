@@ -15,6 +15,7 @@ import (
 	"io"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/thebanri/limoni"
 	"github.com/thebanri/limoni/widgets"
@@ -53,7 +54,7 @@ func (s *Screen) Run() error {
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
 	u := newUI(s.run)
-	go u.log.follow(ctx, s.client, s.run.ID, limoni.Wakeup)
+	go u.log.follow(ctx, s.client, s.run.ID, (&throttle{every: time.Second / 60, wake: limoni.Wakeup}).kick)
 	err := limoni.RunWithContext(ctx, u.frame, limoni.WithTitle("RunWisp · "+s.run.TaskName))
 	if err == context.Canceled && s.ctx.Err() == nil {
 		err = nil
@@ -289,4 +290,39 @@ func (s *store) follow(ctx context.Context, client *apiclient.Client, runID stri
 		s.mu.Unlock()
 		wake()
 	}
+}
+
+// throttle passes on at most one wake per interval, so a task printing
+// thousands of lines a second is drawn at 60 frames a second, as Bubble Tea
+// draws, not once per batch of lines. The last wake is never lost.
+type throttle struct {
+	every time.Duration
+	wake  func()
+
+	mu      sync.Mutex
+	last    time.Time
+	pending bool
+}
+
+func (t *throttle) kick() {
+	t.mu.Lock()
+	if t.pending {
+		t.mu.Unlock()
+		return
+	}
+	wait := t.every - time.Since(t.last)
+	if wait <= 0 {
+		t.last = time.Now()
+		t.mu.Unlock()
+		t.wake()
+		return
+	}
+	t.pending = true
+	t.mu.Unlock()
+	time.AfterFunc(wait, func() {
+		t.mu.Lock()
+		t.pending, t.last = false, time.Now()
+		t.mu.Unlock()
+		t.wake()
+	})
 }
